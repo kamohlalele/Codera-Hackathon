@@ -52,3 +52,9 @@ h <- 4
 
 fx_friday <- fx_friday %>%
   mutate(target = lead(usdzar, h))
+
+# ============================================================
+# 4. Adding the explanatory variables
+# ============================================================
+
+##US DATA####

@@ -91,6 +91,66 @@ ggsave(
   height = 14
 )
 
+# The final regression uses a smaller, economically motivated set of series.
+# This focused plot is the one to use in the report/slides when asked for the
+# variables used in the model.
+selected_model_series <- c(
+  usdzar = "USD/ZAR exchange rate",
+  target = "USD/ZAR target, 4 weeks ahead",
+  gold = "Gold price",
+  vix = "VIX volatility index",
+  us_10y = "US 10-year Treasury yield",
+  gov_bond = "SA government bond yield"
+)
+
+selected_plot_data <- fx_weekly_merged %>%
+  select(date, all_of(names(selected_model_series))) %>%
+  pivot_longer(-date, names_to = "series", values_to = "value") %>%
+  mutate(
+    series = factor(
+      series,
+      levels = names(selected_model_series),
+      labels = selected_model_series
+    )
+  )
+
+selected_model_plot <- ggplot(selected_plot_data, aes(date, value)) +
+  geom_line(linewidth = 0.45, colour = "#2f6f73", na.rm = TRUE) +
+  facet_wrap(~ series, scales = "free_y", ncol = 2) +
+  scale_x_date(
+    date_breaks = "5 years",
+    date_labels = "%Y",
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  labs(
+    title = "Series used in the final USD/ZAR forecasting model",
+    subtitle = "Weekly Friday-aligned model variables and 4-week-ahead target",
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+ggsave(
+  file.path(plot_dir, "selected_model_series.png"),
+  selected_model_plot,
+  width = 11,
+  height = 9,
+  dpi = 220
+)
+
+ggsave(
+  file.path(plot_dir, "selected_model_series.pdf"),
+  selected_model_plot,
+  width = 11,
+  height = 9
+)
+
 for (series_name in names(series_labels)) {
   individual_plot <- fx_weekly_merged %>%
     ggplot(aes(date, .data[[series_name]])) +

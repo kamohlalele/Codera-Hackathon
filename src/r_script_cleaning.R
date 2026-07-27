@@ -120,7 +120,7 @@ vix <- align_to_fridays(
 )
 
 # ---- 4f. US inflation (annual) ----
-usinf_raw <- read_excel("data/FPCPITOTLZGUSA.xlsx", sheet = "Annual")
+usinf_raw <- read_excel("data/USA CPI.xlsx", sheet = "Annual")
 us_inflation <- align_to_fridays(usinf_raw %>% select(date = 1, value = 2))
 
 # ---- 4g. US 10-year Treasury yield (daily) ----

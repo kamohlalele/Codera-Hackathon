@@ -8,8 +8,11 @@ Regression using an expanding window approsch in the model as : Each Friday, we 
 
 
 USDZAR momentum, gold, VIX/risk sentiment, US & SA yields are the variables with most predictive value 
+selected variables with clear economic channels to the rand — commodity exports (gold) and global rate differentials (US 10y, SA bond) — transformed appropriately for stationarity
 
-
+Prefix	Meaning	Used for transformations used :
+dl_	: 100 × log-difference ≈ weekly % change	Prices/indices like gold, VIX, USD/ZAR	A price of R30,000/oz vs a rate of 4% aren't comparable in raw units; % change puts a price on a natural, stationary scale
+d_: 	first difference = weekly change in the level	Rates/yields like US 10y, SA bond	A yield is already a percentage; its meaningful move is "up 0.1 percentage points," not "up 2%". A simple difference captures that
 
 ##SUMMARY##
 The goal
@@ -47,3 +50,9 @@ Combined	0.5625
 In words: your Combined model is essentially tied with the benchmark (0.5625 vs 0.5619 — a difference of about half a cent on the rand). The extra economic variables almost match the simple rule but don't clearly beat it.
 
 Why that's not a failure: predicting currencies a month ahead is one of the hardest problems in economics — the simple "it'll be about the same" rule is shockingly good, and most professional models can't beat it either. Matching it with a transparent, honestly-tested model is a solid, defensible result — and the rules reward your rigor and explanation, not just the RMSE.
+
+
+
+
+Coeffcient results: 
+"Of our five drivers, only recent USD/ZAR momentum (mean-reverting) and gold are statistically significant. The rate variables carry the expected sign but are insignificant at the monthly horizon. Notably, gold enters positively — consistent with gold acting as a global risk-off signal (rand weakens in risk-off episodes) rather than through SA's gold exports. The generally weak significance reflects the well-known difficulty of beating a random walk in exchange-rate forecasting."

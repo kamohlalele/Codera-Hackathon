@@ -352,3 +352,35 @@ write_csv(sample_counts,       here("outputs", "summary_sample_counts.csv"))
 write_csv(summary_levels,      here("outputs", "summary_stats_levels_2021_2025.csv"))
 write_csv(summary_transformed, here("outputs", "summary_stats_transformed_2021_2025.csv"))
 write_csv(model_performance,   here("outputs", "model_performance.csv"))
+
+# ---- 8f. Full-sample regression coefficients (does the data match the theory?) ----
+# Fit the regression once on all complete-case data. These coefficients are
+# indicative only — the forecasting loop re-estimates the model every Friday —
+# but they show the AVERAGE direction of each driver. The target is the 4-week
+# USDZAR return, so a positive coefficient means "predictor up -> USDZAR up
+# (rand weakens)"; negative means "predictor up -> USDZAR down (rand strengthens)".
+full_fit <- lm(
+  model_formula,
+  data = model_data %>%
+    filter(if_all(all_of(c("y_ret", predictors)), ~ !is.na(.)))
+)
+
+coef_table <- summary(full_fit)$coefficients %>%
+  as.data.frame() %>%
+  rownames_to_column("term") %>%
+  as_tibble() %>%
+  rename(estimate = Estimate, std_error = `Std. Error`,
+         t_value = `t value`, p_value = `Pr(>|t|)`) %>%
+  mutate(
+    direction = case_when(
+      term == "(Intercept)" ~ "baseline",
+      estimate >= 0         ~ "USDZAR up (rand weakens)",
+      TRUE                  ~ "USDZAR down (rand strengthens)"
+    ),
+    significant_5pct = p_value < 0.05
+  )
+
+cat("\n--- Full-sample regression coefficients (indicative) ---\n")
+print(coef_table)
+
+write_csv(coef_table, here("outputs", "regression_coefficients_full_sample.csv"))

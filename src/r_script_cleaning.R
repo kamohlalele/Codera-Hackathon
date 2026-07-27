@@ -5,8 +5,13 @@ library(tseries)
 library(zoo)
 library(readxl)
 
+# Portable paths: `here` anchors every path to the repo root (found via the .git
+# folder), so anyone who clones the repo can run this without editing paths.
+if (!requireNamespace("here", quietly = TRUE)) install.packages("here")
+library(here)
+
 fx_raw <- read_excel(
-  "data/ECONDATA_MARKET_RATES(1.0.0).xlsx",
+  here("data", "ECONDATA_MARKET_RATES(1.0.0).xlsx"),
   sheet = "MARKET_RATES(1.0.0)",
   skip = 12,
   col_names = c("date", "usdzar")
@@ -86,7 +91,7 @@ align_to_fridays <- function(df) {
 
 # ---- 4a. Gold / Prime / Repo / Overnight FX (daily; one file, 4 blocks) ----
 gpro_raw <- read_excel(
-  "data/ECONDATA_GOLD_PRIME_REPO_OVERNIGHTFX(1.0.0).xlsx",
+  here("data", "ECONDATA_GOLD_PRIME_REPO_OVERNIGHTFX(1.0.0).xlsx"),
   sheet = "MARKET_RATES(1.0.0)",
   skip = 12,
   col_names = c("gold_date", "gold", "prime_date", "prime",
@@ -99,20 +104,20 @@ repo  <- align_to_fridays(gpro_raw %>% select(date = repo_date,  value = repo))
 ofx   <- align_to_fridays(gpro_raw %>% select(date = ofx_date,   value = ofx))
 
 # ---- 4b. SA CPI (monthly; series starts 2002, earlier Fridays stay NA) ----
-cpi_raw <- read_excel("data/CPI (2002).xlsx", sheet = "Monthly", skip = 9,
+cpi_raw <- read_excel(here("data", "CPI (2002).xlsx"), sheet = "Monthly", skip = 9,
                       col_names = c("date", "cpi"))
 cpi <- align_to_fridays(cpi_raw %>% select(date = 1, value = 2))
 
 # ---- 4c. Crude oil (annual) ----
-oil_raw <- read_csv("data/BER_Crude_Oil_2026-07-25.csv", show_col_types = FALSE)
+oil_raw <- read_csv(here("data", "BER_Crude_Oil_2026-07-25.csv"), show_col_types = FALSE)
 crude_oil <- align_to_fridays(oil_raw %>% select(date = 1, value = 2))
 
 # ---- 4d. SA government bond yield (daily) ----
-bond_raw <- read_csv("data/BER_GOV_BONDS_2026-07-25.csv", show_col_types = FALSE)
+bond_raw <- read_csv(here("data", "BER_GOV_BONDS_2026-07-25.csv"), show_col_types = FALSE)
 gov_bond <- align_to_fridays(bond_raw %>% select(date = 1, value = 2))
 
 # ---- 4e. VIX (daily; date is d/m/Y) ----
-vix_raw <- read_csv("data/VIX.csv", show_col_types = FALSE,
+vix_raw <- read_csv(here("data", "VIX.csv"), show_col_types = FALSE,
                     col_types = cols(observation_date = col_character(),
                                      VIXCLS = col_character()))
 vix <- align_to_fridays(
@@ -120,18 +125,18 @@ vix <- align_to_fridays(
 )
 
 # ---- 4f. US inflation (annual) ----
-usinf_raw <- read_excel("data/USA CPI.xlsx", sheet = "Annual")
+usinf_raw <- read_excel(here("data", "USA CPI.xlsx"), sheet = "Annual")
 us_inflation <- align_to_fridays(usinf_raw %>% select(date = 1, value = 2))
 
 # ---- 4g. US 10-year Treasury yield (daily) ----
-ust_raw <- read_excel("data/US treasury 10 year.xlsx", sheet = "Daily")
+ust_raw <- read_excel(here("data", "US treasury 10 year.xlsx"), sheet = "Daily")
 us_10y <- align_to_fridays(ust_raw %>% select(date = 1, value = 2))
 
 # ---- 4h. Trade balance (monthly) ----
 # NOTE: data/Trade Balance.xlsx currently exports metadata only (no
 # observations, "Selection: None"), so it is skipped. Re-export the file
 # with data and uncomment the block below to include it.
-# tb_raw <- read_excel("data/Trade Balance.xlsx", sheet = "Monthly", skip = 9,
+# tb_raw <- read_excel(here("data", "Trade Balance.xlsx"), sheet = "Monthly", skip = 9,
 #                      col_names = c("date", "trade_balance"))
 # trade_balance <- align_to_fridays(tb_raw %>% select(date = 1, value = 2))
 
@@ -157,7 +162,7 @@ fx_weekly <- fx_friday %>%
 glimpse(fx_weekly)
 
 # Write the merged weekly dataset
-write_csv(fx_weekly, "data/fx_weekly_merged.csv")
+write_csv(fx_weekly, here("data", "fx_weekly_merged.csv"))
 
 # Also expose it in the global environment under the file's name
 fx_weekly_merged <- fx_weekly

@@ -1,0 +1,23 @@
+variable,data_scale,transformation,observations,distinct_values,stationarity_pass,linearity_pass,homoskedasticity_pass,no_residual_autocorrelation_pass,normality_for_inference_pass,overall_diagnostic_pass
+cpi,transformed,100 x log difference,260,54,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE
+cpi,untransformed level,none,261,51,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE
+crude_oil,transformed,100 x log difference,260,5,TRUE,TRUE,TRUE,TRUE,FALSE,TRUE
+crude_oil,untransformed level,none,261,5,FALSE,TRUE,TRUE,TRUE,FALSE,FALSE
+gold,transformed,100 x log difference,260,260,TRUE,FALSE,TRUE,TRUE,FALSE,FALSE
+gold,untransformed level,none,261,261,FALSE,TRUE,FALSE,FALSE,FALSE,FALSE
+gov_bond,transformed,first difference,260,103,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+gov_bond,untransformed level,none,261,180,FALSE,TRUE,FALSE,TRUE,TRUE,FALSE
+overnight_fx,transformed,first difference,260,209,TRUE,FALSE,TRUE,FALSE,FALSE,FALSE
+overnight_fx,untransformed level,none,261,192,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
+prime,transformed,first difference,260,5,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE
+prime,untransformed level,none,261,14,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE
+repo,transformed,first difference,260,5,FALSE,TRUE,TRUE,FALSE,FALSE,FALSE
+repo,untransformed level,none,261,14,FALSE,FALSE,TRUE,FALSE,FALSE,FALSE
+us_10y,transformed,first difference,260,119,TRUE,TRUE,TRUE,TRUE,TRUE,TRUE
+us_10y,untransformed level,none,261,163,FALSE,FALSE,TRUE,TRUE,TRUE,FALSE
+us_inflation,transformed,first difference,260,4,TRUE,TRUE,TRUE,TRUE,FALSE,TRUE
+us_inflation,untransformed level,none,261,4,FALSE,TRUE,TRUE,TRUE,FALSE,FALSE
+usdzar,transformed,100 x log difference,260,260,TRUE,TRUE,TRUE,TRUE,FALSE,TRUE
+usdzar,untransformed level,none,261,261,FALSE,FALSE,TRUE,TRUE,FALSE,FALSE
+vix,transformed,100 x log difference,260,260,TRUE,TRUE,TRUE,TRUE,FALSE,TRUE
+vix,untransformed level,none,261,243,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE

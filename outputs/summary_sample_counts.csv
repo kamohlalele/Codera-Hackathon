@@ -1,0 +1,11 @@
+metric,value
+Total weekly observations,1907
+Full sample start,1990-01-05
+Full sample end,2026-07-17
+Forecast period start,2021-01-01
+Forecast period end,2025-12-26
+Number of Friday forecasts,261
+AR(1) training obs at first forecast,1618
+AR(1) training obs at last forecast,1878
+Regression training obs at first forecast,987
+Regression training obs at last forecast,1247

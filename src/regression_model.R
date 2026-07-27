@@ -384,3 +384,168 @@ cat("\n--- Full-sample regression coefficients (indicative) ---\n")
 print(coef_table)
 
 write_csv(coef_table, here("outputs", "regression_coefficients_full_sample.csv"))
+
+# ============================================================
+# 9. Alternative regression: swap GOLD out, TRADE BALANCE in
+#    Builds a second weekly dataset that adds the quarterly SA trade balance
+#    (carried forward to weekly) and drops gold, then re-runs the exact same
+#    out-of-sample loop (1990-start expanding window, 2021-2025 origins) so the
+#    RMSE is directly comparable to the original regression.
+# ============================================================
+
+# ---- 9a. Read the trade balance file (already date + value columns) ----
+# Quarterly series KBP5010L, so it is carried forward to every Friday (LOCF),
+# the same upsampling rule used for the other lower-frequency series.
+trade_raw <- read_csv(here("data", "BER_Trade_Balance_2026-07-27.csv"),
+                      show_col_types = FALSE) %>%
+  transmute(date = as.Date(date_col), trade_balance = as.numeric(KBP5010L)) %>%
+  filter(!is.na(date), !is.na(trade_balance)) %>%
+  arrange(date)
+
+trade_weekly <- tibble(date = fx_weekly_merged$date) %>%
+  full_join(trade_raw, by = "date") %>%
+  arrange(date) %>%
+  tidyr::fill(trade_balance, .direction = "down") %>%   # carry last value forward
+  filter(date %in% fx_weekly_merged$date) %>%
+  arrange(date)
+
+# ---- 9b. Second merged dataset: add trade balance, remove gold ----
+fx_weekly_merged_tb <- fx_weekly_merged %>%
+  select(-gold) %>%
+  left_join(trade_weekly, by = "date") %>%
+  arrange(date)
+
+# ---- 9c. Transformations for this variant (gold replaced by trade balance) ----
+model_data_tb <- fx_weekly_merged_tb %>%
+  arrange(date) %>%
+  mutate(
+    y_ret     = 100 * (log(target)  - log(usdzar)),
+    dl_usdzar = 100 * (log(usdzar)  - log(lag(usdzar))),
+    dl_vix    = 100 * (log(vix)     - log(lag(vix))),
+    d_us10    = us_10y   - lag(us_10y),
+    d_gov     = gov_bond - lag(gov_bond),
+    d_trade   = trade_balance - lag(trade_balance)  # flow can be negative -> first difference
+  )
+
+predictors_tb <- c("dl_usdzar", "dl_vix", "d_us10", "d_gov", "d_trade")
+formula_tb    <- as.formula(paste("y_ret ~", paste(predictors_tb, collapse = " + ")))
+
+# ---- 9d. Same out-of-sample expanding-window loop, same 2021-2025 origins ----
+results_tb <- tibble(
+  origin_date     = test_dates,
+  actual          = NA_real_,
+  reg_tb_forecast = NA_real_
+)
+
+for (i in seq_along(test_dates)) {
+  origin <- test_dates[i]
+  results_tb$actual[i] <- model_data_tb$target[model_data_tb$date == origin]
+
+  train_tb <- model_data_tb %>%
+    filter(date <= origin - (h * 7)) %>%
+    filter(if_all(all_of(c("y_ret", predictors_tb)), ~ !is.na(.)))
+
+  fit_tb   <- lm(formula_tb, data = train_tb)
+  x_now    <- model_data_tb %>% filter(date == origin)
+  yhat_ret <- as.numeric(predict(fit_tb, newdata = x_now))
+  results_tb$reg_tb_forecast[i] <- x_now$usdzar * exp(yhat_ret / 100)
+}
+
+results_tb <- results_tb %>% mutate(reg_tb_error = actual - reg_tb_forecast)
+
+# ---- 9e. Compare RMSE: trade-balance model vs original (gold) regression ----
+rmse_reg_tb <- rmse(results_tb$reg_tb_error)
+r2_reg_tb   <- r2(results_tb$reg_tb_error, results_tb$actual)
+
+cat("\n--- Alternative regression: trade balance (no gold) vs original ---\n")
+cat("RMSE — AR(1) benchmark:            ", round(rmse_ar1, 4), "\n")
+cat("RMSE — original regression (gold): ", round(rmse_reg, 4), "\n")
+cat("RMSE — trade-balance regression:   ", round(rmse_reg_tb, 4), "\n")
+cat("Trade-balance vs gold regression:  ",
+    round(100 * (rmse_reg - rmse_reg_tb) / rmse_reg, 2),
+    "% (positive = trade balance is better)\n")
+
+# Comparison bar chart with the numbers on it.
+rmse_compare <- tibble(
+  model = c("AR(1)", "Regression (gold)", "Regression (trade balance)"),
+  rmse  = c(rmse_ar1, rmse_reg, rmse_reg_tb)
+) %>%
+  mutate(model = factor(model, levels = model))
+
+ggplot(rmse_compare, aes(model, rmse, fill = model)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  geom_text(aes(label = round(rmse, 4)), vjust = -0.4, size = 5) +
+  labs(title = "Out-of-Sample RMSE: Trade-Balance vs Gold Regression vs AR(1) (2021-2025)",
+       x = NULL, y = "RMSE (ZAR per USD)") +
+  theme_minimal()
+
+write_csv(results_tb, here("outputs", "forecast_results_trade_balance_2021_2025.csv"))
+
+# ============================================================
+# 10. Attribution: is the gain from ADDING trade balance, or from
+#     REMOVING gold? Fit the 4 core predictors alone (no gold, no trade
+#     balance) with the same out-of-sample loop, then decompose the effect.
+# ============================================================
+predictors_core <- c("dl_usdzar", "dl_vix", "d_us10", "d_gov")
+formula_core    <- as.formula(paste("y_ret ~", paste(predictors_core, collapse = " + ")))
+
+results_core <- tibble(
+  origin_date       = test_dates,
+  actual            = NA_real_,
+  reg_core_forecast = NA_real_
+)
+
+for (i in seq_along(test_dates)) {
+  origin <- test_dates[i]
+  results_core$actual[i] <- model_data$target[model_data$date == origin]
+
+  train_core <- model_data %>%
+    filter(date <= origin - (h * 7)) %>%
+    filter(if_all(all_of(c("y_ret", predictors_core)), ~ !is.na(.)))
+
+  fit_core <- lm(formula_core, data = train_core)
+  x_now    <- model_data %>% filter(date == origin)
+  yhat_ret <- as.numeric(predict(fit_core, newdata = x_now))
+  results_core$reg_core_forecast[i] <- x_now$usdzar * exp(yhat_ret / 100)
+}
+
+results_core  <- results_core %>% mutate(reg_core_error = actual - reg_core_forecast)
+rmse_reg_core <- rmse(results_core$reg_core_error)
+r2_reg_core   <- r2(results_core$reg_core_error, results_core$actual)
+
+cat("\n--- Attribution: what drives the improvement? ---\n")
+cat("RMSE — AR(1) benchmark:                 ", round(rmse_ar1, 4), "\n")
+cat("RMSE — 5 vars WITH gold:                ", round(rmse_reg, 4), "\n")
+cat("RMSE — 4 core vars (no gold, no trade): ", round(rmse_reg_core, 4), "\n")
+cat("RMSE — 4 core + trade balance:          ", round(rmse_reg_tb, 4), "\n\n")
+cat("Effect of REMOVING gold (5-with-gold -> 4-core):  ",
+    round(100 * (rmse_reg - rmse_reg_core) / rmse_reg, 2),
+    "% (positive = better)\n")
+cat("Effect of ADDING trade balance (4-core -> +trade):",
+    round(100 * (rmse_reg_core - rmse_reg_tb) / rmse_reg_core, 2),
+    "% (positive = better)\n")
+
+# R-squared on the 1-month MOVEMENT (the honest view): how much of the actual
+# 4-week *change* in USDZAR does each model explain? The denominator uses the
+# variance of the actual change (not the level), so it is a far more demanding
+# test — and can go negative if a model beats the mean-change less than expected.
+# All results tables share the same origins, so the actual change is common.
+usdzar_at_origin <- model_data$usdzar[match(test_dates, model_data$date)]
+actual_change    <- results$actual - usdzar_at_origin
+sst_change       <- sum((actual_change - mean(actual_change))^2)
+r2_move <- function(err) 1 - sum(err^2) / sst_change
+
+rmse_all <- tibble(
+  model = c("AR(1)", "5 vars (with gold)", "4 core (no gold/trade)", "4 core + trade balance"),
+  rmse  = c(rmse_ar1, rmse_reg, rmse_reg_core, rmse_reg_tb),
+  r2_level = c(r2_ar1, r2_reg, r2_reg_core, r2_reg_tb),
+  r2_movement = c(
+    r2_move(results$ar1_error),
+    r2_move(results$reg_error),
+    r2_move(results_core$reg_core_error),
+    r2_move(results_tb$reg_tb_error)
+  )
+)
+cat("\n--- RMSE, level R-squared, and movement R-squared, all variants ---\n")
+print(rmse_all)
+write_csv(rmse_all, here("outputs", "rmse_attribution.csv"))
